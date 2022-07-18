@@ -11,41 +11,60 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import environ
+env = environ.Env()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
+APP_DIR = ROOT_DIR / "core_apps"
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-99@o-+&y5+hf4_uc@7y(akk--rl!-u^=!!!+xbkbu99+2nug_@'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool("DJANGO_DEBUG", False)
 
-ALLOWED_HOSTS = []
+
+
 
 
 # Application definition
 
-INSTALLED_APPS = [
-    'django.contrib.admin',
+DJANGO_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
+    "django.contrib.sites",
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.admin',
 ]
+
+THIRD_PARTY_APPS = [
+    "rest_framework",
+    "django_filters",
+    "django_countries",
+    "phonenumber_field",
+    "drf_yasg",
+    "corsheaders",
+]
+
+LOCAL_APPS = [
+    "core_apps.common",
+    "core_apps.users",
+    "core_apps.profiles"
+]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -54,13 +73,16 @@ ROOT_URLCONF = 'authors_api.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [str(APP_DIR / "templates")],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
+                "django.templates.context_processors.i18n",
+                "django.templates.context_processors.static",
+                "django.templates.context_processors.tz",
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -73,13 +95,15 @@ WSGI_APPLICATION = 'authors_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+DATABASES = {'default': env.db("DATABASE_URL")}
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -105,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Seoul'
 
 USE_I18N = True
 
@@ -113,13 +137,37 @@ USE_L10N = True
 
 USE_TZ = True
 
+SITE_ID = 1
+
+#프로덕션에서는 이해할 수없는 랜덤 문자열로 적는다
+ADMIN_URL = "supersecret/"
+
+ADMINS = [("""CHRISTY""", "christychoi.dev@gmail.com")]
+
+MANAGERS = ADMINS
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
-STATIC_URL = '/static/'
+STATIC_URL = '/staticfiles/'
+STATIC_ROOT = str(ROOT_DIR / 'staticfiles')
+STATICFILES_DIRS = []
+
+#앱마다 static 폴더를 둘 수 있다 App명/static/App명으로 해둬야 동명의 파일이 충돌하지 않는다
+#STATICFILES_DIRS 에 있는 경로들로 부터 정적파일을 찾을 수 있게하는 finder
+
+STATICFILES_FINDERS = [
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+]
+
+MEDIA_URL = "/mediafiles/"
+MEDIA_ROOT = str(ROOT_DIR / "mediafiles")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+CORS_URLS_REGEX=r"^/api/.*$"
+
